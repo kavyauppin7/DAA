@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Fare and Shortest Path</title>
+    <style>
+        .code-editor {
+            position: relative;
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            color: #f8f8f2;
+            font-size: 16px;
+            overflow: auto;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            height: 500px;
+            border: 2px solid #333;
+        }
+
+        /* Code Block Styling */
+        pre {
+            margin: 0;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        /* Interactive Buttons for Code */
+        .run-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+
+        .run-btn:hover {
+            background-color: #45a049;
+        }
+
+        .run-btn:active {
+            background-color: #3e8e41;
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #333;
+            color: #f8f8f2;
+            border-radius: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Transport Fare and Shortest Path</h1>
+
+    <div class="code-editor">
+        <pre>
+#include &lt;iostream&gt;
+#include &lt;unordered_map&gt;
+#include &lt;vector&gt;
+#include &lt;limits&gt;
+#include &lt;string&gt;
+#include &lt;cctype&gt;
+
+using namespace std;
+
+class Transport {
+public:
+    virtual double calculateFare(double distance) = 0;
+    virtual string getModeName() = 0;
+    virtual ~Transport() {}
+};
+
+class Bus : public Transport {
+public:
+    double calculateFare(double distance) override {
+        return distance * 0.50;  // $0.50 per km
+    }
+    string getModeName() override {
+        return "Bus";
+    }
+};
+
+class Metro : public Transport {
+public:
+    double calculateFare(double distance) override {
+        return distance * 0.75;  // $0.75 per km
+    }
+    string getModeName() override {
+        return "Metro";
+    }
+};
+
+class EScooter : public Transport {
+public:
+    double calculateFare(double distance) override {
+        return distance * 0.30;  // $0.30 per km
+    }
+    string getModeName() override {
+        return "E-Scooter";
+    }
+};
+
+// Bellman-Ford algorithm to find the shortest path
+double bellmanFord(const unordered_map<string, unordered_map<string, double>>& graph, const string& source, const string& destination) {
+    unordered_map<string, double> dist;  // To store the shortest distance to each station
+    unordered_map<string, string> prev;  // To store the previous station for each station
+
+    // Initialize distances to infinity and source distance to 0
+    for (const auto& pair : graph) {
+        dist[pair.first] = numeric_limits<double>::infinity();
+    }
+    dist[source] = 0;
+
+    // Relax edges V-1 times (V is the number of stations)
+    for (size_t i = 0; i < graph.size() - 1; ++i) {
+        for (const auto& u : graph) {
+            for (const auto& v : u.second) {
+                string uStation = u.first;
+                string vStation = v.first;
+                double weight = v.second;
+
+                // Relax the edge
+                if (dist[uStation] + weight < dist[vStation]) {
+                    dist[vStation] = dist[uStation] + weight;
+                    prev[vStation] = uStation;
+                }
+            }
+        }
+    }
+
+    // Check for negative-weight cycles (not required here, but good practice)
+    for (const auto& u : graph) {
+        for (const auto& v : u.second) {
+            string uStation = u.first;
+            string vStation = v.first;
+            double weight = v.second;
+
+            if (dist[uStation] + weight < dist[vStation]) {
+                cout << "Graph contains negative weight cycle!" << endl;
+                return -1;
+            }
+        }
+    }
+
+    // Return the shortest distance to the destination
+    return dist[destination];
+}
+
+int main() {
+    Bus bus;
+    Metro metro;
+    EScooter eScooter;
+
+    // Graph representation (adjacency list with distances between stations)
+    unordered_map<string, unordered_map<string, double>> graph = {
+        {"Station A", {{"Station B", 2.0}, {"Station C", 5.0}, {"Station D", 8.0}, {"Station E", 10.0}}},
+        {"Station B", {{"Station A", 2.0}, {"Station C", 3.0}, {"Station D", 6.0}, {"Station E", 8.0}}},
+        {"Station C", {{"Station A", 5.0}, {"Station B", 3.0}, {"Station D", 4.0}, {"Station E", 6.0}}},
+        {"Station D", {{"Station A", 8.0}, {"Station B", 6.0}, {"Station C", 4.0}, {"Station E", 2.0}}},
+        {"Station E", {{"Station A", 10.0}, {"Station B", 8.0}, {"Station C", 6.0}, {"Station D", 2.0}}}
+    };
+
+    string source, destination;
+    cout << "Enter source station (A, B, C, D, E): ";
+    cin >> source;
+    cout << "Enter destination station (A, B, C, D, E): ";
+    cin >> destination;
+
+    // Convert input to uppercase to avoid case sensitivity issues
+    for (auto &c : source) c = toupper(c);
+    for (auto &c : destination) c = toupper(c);
+
+    // Convert station abbreviations to full station names
+    unordered_map<string, string> stationMap = {
+        {"A", "Station A"}, {"B", "Station B"}, {"C", "Station C"},
+        {"D", "Station D"}, {"E", "Station E"}
+    };
+
+    // Validate if source and destination are valid
+    if (stationMap.find(source) == stationMap.end() || stationMap.find(destination) == stationMap.end()) {
+        cout << "Invalid source or destination station entered!" << endl;
+        return 1;
+    }
+
+    string fullSource = stationMap[source];
+    string fullDestination = stationMap[destination];
+
+    // Calculate the shortest distance using Bellman-Ford algorithm
+    double distance = bellmanFord(graph, fullSource, fullDestination);
+    if (distance == -1) {
+        cout << "No valid route found between " << fullSource << " and " << fullDestination << endl;
+        return 1;
+    }
+
+    // Calculate fare for each transport mode
+    double busFare = bus.calculateFare(distance);
+    double metroFare = metro.calculateFare(distance);
+    double eScooterFare = eScooter.calculateFare(distance);
+
+    // Convert fare from USD to INR (1 USD = 80 INR)
+    double busFareINR = busFare * 80;
+    double metroFareINR = metroFare * 80;
+    double eScooterFareINR = eScooterFare * 80;
+
+    // Display the fares in INR (Rupees)
+    cout << "\nDistance between " << fullSource << " and " << fullDestination << ": " << distance << " km" << endl;
+    cout << "Fare for Bus: INR " << busFareINR << endl;
+    cout << "Fare for Metro: INR " << metroFareINR << endl;
+    cout << "Fare for E-Scooter: INR " << eScooterFareINR << endl;
+
+    // Ask user for choice of transport mode using options 1, 2, 3
+    int modeChoice;
+    cout << "\nChoose your transport mode:" << endl;
+    cout << "1. Bus" << endl;
+    cout << "2. Metro" << endl;
+    cout << "3. E-Scooter" << endl;
+    cout << "Enter your choice (1/2/3): ";
+    cin >> modeChoice;
+
+    // Display the final price to be paid based on the user's choice
+    switch (modeChoice) {
+        case 1:
+            cout << "You chose Bus. Final fare: INR " << busFareINR << endl;
+            break;
+        case 2:
+            cout << "You chose Metro. Final fare: INR " << metroFareINR << endl;
+            break;
+        case 3:
+            cout << "You chose E-Scooter. Final fare: INR " << eScooterFareINR << endl;
+            break;
+        default:
+            cout << "Invalid choice entered!" << endl;
+            return 1;
+    }
+
+    return 0;
+}
+        </pre>
+        <button class="run-btn" onclick="runCode()">Run Code</button>
+    </div>
+
+    <div class="output" id="output">
+        <p>Output will appear here after running the code.</p>
+    </div>
+
+    <script>
+        function runCode() {
+            const outputElement = document.getElementById("output");
+            outputElement.innerHTML = `
+                <p><strong>Output:</strong></p>
+                <p>Enter source station (A, B, C, D, E): A</p>
+                <p>Enter destination station (A, B, C, D, E): D</p>
+                <p><strong>Distance between Station A and Station D:</strong> 8 km</p>
+                <p><strong>Fare for Bus:</strong> INR 320</p>
+                <p><strong>Fare for Metro:</strong> INR 480</p>
+                <p><strong>Fare for E-Scooter:</strong> INR 192</p>
+
+                <p><strong>Choose your transport mode:</strong></p>
+                <p>1. Bus</p>
+                <p>2. Metro</p>
+                <p>3. E-Scooter</p>
+                <p><strong>Enter your choice (1/2/3):</strong> 1</p>
+                <p><strong>You chose Bus. Final fare:</strong> INR 320</p>
+                
+                <p>Process returned 0 (0x0) execution time: 16.474 s</p>
+                <p>Press any key to continue.</p>
+            `;
+        }
+    </script>
+
+</body>
+</html>
