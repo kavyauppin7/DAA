@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Shortest Path Algorithm</title>
+    <style>
+        .code-editor {
+            position: relative;
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            color: #f8f8f2;
+            font-size: 16px;
+            overflow: auto;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            height: 500px;
+            border: 2px solid #333;
+        }
+
+        /* Code Block Styling */
+        pre {
+            margin: 0;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        /* Interactive Buttons for Code */
+        .run-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s;
+        }
+
+        .run-btn:hover {
+            background-color: #45a049;
+        }
+
+        .run-btn:active {
+            background-color: #3e8e41;
+        }
+
+        .output {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #333;
+            color: #f8f8f2;
+            border-radius: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Graph Shortest Path Algorithm</h1>
+
+    <div class="code-editor">
+        <pre>
+#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;queue&gt;
+#include &lt;climits&gt;
+#include &lt;stack&gt;
+
+using namespace std;
+
+// Representing a graph as an adjacency matrix for simplicity
+class Graph {
+public:
+    int vertices;  // Number of locations
+    vector&lt;vector&lt;int&gt;&gt; adjMatrix;  // Adjacency matrix to store traffic times
+
+    Graph(int v) : vertices(v) {
+        adjMatrix.resize(v, vector&lt;int&gt;(v, INT_MAX)); // Initialize all distances to infinity
+    }
+
+    // Add an edge between two locations with a traffic delay time
+    void addEdge(int src, int dest, int time) {
+        adjMatrix[src][dest] = time;
+        adjMatrix[dest][src] = time;  // Assuming it's an undirected graph
+    }
+
+    // Dijkstra's algorithm to find the shortest path
+    vector&lt;int&gt; dijkstra(int src, vector&lt;int&gt;& parent) {
+        vector&lt;int&gt; dist(vertices, INT_MAX);
+        dist[src] = 0;
+        priority_queue&lt;pair&lt;int, int&gt;, vector&lt;pair&lt;int, int&gt;&gt;, greater&lt;pair&lt;int, int&gt;&gt;&gt; pq;
+        pq.push({0, src});
+
+        while (!pq.empty()) {
+            int u = pq.top().second;
+            pq.pop();
+
+            // Check all the neighbors of the current node
+            for (int v = 0; v &lt; vertices; ++v) {
+                if (adjMatrix[u][v] != INT_MAX) {
+                    int newDist = dist[u] + adjMatrix[u][v];
+                    if (newDist &lt; dist[v]) {
+                        dist[v] = newDist;
+                        parent[v] = u; // Record the path
+                        pq.push({dist[v], v});
+                    }
+                }
+            }
+        }
+
+        return dist;
+    }
+
+    void displayShortestPath(int src, int dest) {
+        vector&lt;int&gt; parent(vertices, -1); // To store the path
+        vector&lt;int&gt; dist = dijkstra(src, parent);
+
+        if (dist[dest] == INT_MAX) {
+            cout &lt;&lt; "No path found between location " &lt;&lt; src &lt;&lt; " and " &lt;&lt; dest &lt;&lt; endl;
+            return;
+        }
+
+        cout &lt;&lt; "Shortest time from location " &lt;&lt; src &lt;&lt; " to location " &lt;&lt; dest &lt;&lt; ": " &lt;&lt; dist[dest] &lt;&lt; " minutes" &lt;&lt; endl;
+
+        // Reconstruct and display the path
+        stack&lt;int&gt; path;
+        int current = dest;
+        while (current != -1) {
+            path.push(current);
+            current = parent[current];
+        }
+
+        cout &lt;&lt; "Path taken: ";
+        while (!path.empty()) {
+            cout &lt;&lt; path.top() &lt;&lt; " ";
+            path.pop();
+        }
+        cout &lt;&lt; endl;
+    }
+};
+
+int main() {
+    int locations = 5;  // Number of locations (vertices)
+    Graph g(locations);
+
+    // Adding edges with random traffic delays in minutes (you can replace it with real data)
+    g.addEdge(0, 1, 10);  // Example: Bus route from location 0 to 1 with 10 minutes traffic delay
+    g.addEdge(1, 2, 15);  // Example: Metro route from location 1 to 2 with 15 minutes traffic delay
+    g.addEdge(2, 3, 30);  // Example: Bus route from location 2 to 3 with 30 minutes traffic delay
+    g.addEdge(3, 4, 10);  // Example: Metro route from location 3 to 4 with 10 minutes traffic delay
+    g.addEdge(0, 2, 50);  // Example: Bus route from location 0 to 2 with 50 minutes traffic delay
+    g.addEdge(1, 3, 20);  // Example: Metro route from location 1 to 3 with 20 minutes traffic delay
+
+    int source, destination;
+
+    // Get user input for source and destination locations
+    cout &lt;&lt; "Enter the source location (0 to " &lt;&lt; locations - 1 &lt;&lt; "): ";
+    cin &gt;&gt; source;
+    cout &lt;&lt; "Enter the destination location (0 to " &lt;&lt; locations - 1 &lt;&lt; "): ";
+    cin &gt;&gt; destination;
+
+    // Validate the input
+    if (source &lt; 0 || source &gt;= locations || destination &lt; 0 || destination &gt;= locations) {
+        cout &lt;&lt; "Invalid source or destination location!" &lt;&lt; endl;
+        return 1;
+    }
+
+    // Display shortest time and path from source to destination
+    g.displayShortestPath(source, destination);
+
+    return 0;
+}
+        </pre>
+        <button class="run-btn" onclick="runCode()">Run Code</button>
+    </div>
+
+    <div class="output" id="output">
+        <p>Output will appear here after running the code.</p>
+    </div>
+
+    <script>
+        function runCode() {
+            const outputElement = document.getElementById("output");
+            outputElement.innerHTML = `
+                <p><strong>Output:</strong></p>
+                <p>Enter the source location (0 to 4): 0</p>
+                <p>Enter the destination location (0 to 4): 4</p>
+                <p><strong>Shortest time from location 0 to location 4:</strong> 40 minutes</p>
+                <p><strong>Path taken:</strong> 0 1 3 4</p>
+                <p>Process returned 0 (0x0) execution time: 23.296 s</p>
+                <p>Press any key to continue.</p>
+            `;
+        }
+    </script>
+
+</body>
+</html>
